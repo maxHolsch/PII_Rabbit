@@ -11,7 +11,7 @@ export class LLMClient {
   private model: string;
   private timeout: number;
 
-  constructor(endpoint: string, model: string, timeout = 30000) {
+  constructor(endpoint: string, model: string, timeout = 300000) {
     this.endpoint = endpoint;
     this.model = model;
     this.timeout = timeout;
