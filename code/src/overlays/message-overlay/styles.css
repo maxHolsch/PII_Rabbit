@@ -37,7 +37,7 @@
   color: white;
   padding: 6px 10px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 13px;
   white-space: nowrap;
   pointer-events: none;
   z-index: 10000;
@@ -66,5 +66,11 @@
 }
 
 .tooltip-icon {
-  font-size: 10px;
+  font-size: 12px;
+}
+
+/* Focus indicators for accessibility */
+*:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
 }

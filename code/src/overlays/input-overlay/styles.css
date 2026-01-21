@@ -47,7 +47,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   color: #111827;
 }
@@ -60,7 +60,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 14px;
   color: #6b7280;
 }
 
@@ -103,7 +103,7 @@
   max-height: 400px;
   padding: 12px;
   font-family: system-ui, -apple-system, sans-serif;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.5;
   color: #111827;
   background: #f9fafb;
@@ -132,7 +132,7 @@
 }
 
 .char-count {
-  font-size: 12px;
+  font-size: 14px;
   color: #6b7280;
 }
 
@@ -142,7 +142,8 @@
 }
 
 .btn {
-  padding: 8px 16px;
+  padding: 12px 20px;
+  min-height: 44px;
   font-size: 14px;
   font-weight: 500;
   border: none;
@@ -166,6 +167,39 @@
 
 .btn-primary:hover:not(:disabled) {
   background: #4338ca;
+  transform: translateY(-1px);
+}
+
+.btn-primary:not(:disabled):not(.loading) {
+  animation: subtle-pulse 3s ease-in-out infinite;
+}
+
+@keyframes subtle-pulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+  }
+  50% {
+    box-shadow: 0 2px 12px rgba(79, 70, 229, 0.5);
+  }
+}
+
+.btn-primary.loading {
+  position: relative;
+  color: transparent;
+}
+
+.btn-primary.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 .btn-secondary {
@@ -175,6 +209,8 @@
 
 .btn-secondary:hover:not(:disabled) {
   background: #e5e7eb;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .loading-spinner {
@@ -219,7 +255,113 @@
 }
 
 .keyboard-hint {
-  font-size: 11px;
-  color: #9ca3af;
+  font-size: 13px;
+  color: #6b7280;
   margin-top: 8px;
+}
+
+/* Focus indicators for accessibility */
+*:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+}
+
+/* ============================================
+   MOBILE RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet */
+@media (max-width: 768px) {
+  .input-overlay {
+    max-width: calc(100% - 32px);
+    margin: 0 16px;
+  }
+
+  .input-header {
+    padding: 10px 12px;
+  }
+
+  .input-body {
+    padding: 12px;
+  }
+
+  .input-title {
+    font-size: 15px;
+  }
+
+  .status-indicator {
+    font-size: 13px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .input-overlay-container {
+    padding: 0 8px 8px;
+  }
+
+  .input-overlay {
+    max-width: 100%;
+    margin: 0;
+  }
+
+  .input-header {
+    padding: 8px 12px;
+  }
+
+  .input-title {
+    font-size: 14px;
+  }
+
+  .shield-icon {
+    font-size: 14px;
+  }
+
+  .status-indicator {
+    font-size: 12px;
+  }
+
+  .input-body {
+    padding: 12px;
+  }
+
+  .input-textarea {
+    min-height: 100px;
+    font-size: 16px; /* Prevent iOS zoom on focus */
+  }
+
+  .input-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .char-count {
+    font-size: 13px;
+  }
+
+  .keyboard-hint {
+    display: none; /* Hide on touch devices */
+  }
+
+  .actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Very small devices */
+@media (max-width: 360px) {
+  .input-title span:last-child {
+    display: none; /* Hide "PII Shield" text, keep icon */
+  }
+
+  .status-indicator span {
+    display: none; /* Hide status text, keep dot */
+  }
 }

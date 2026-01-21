@@ -1,6 +1,6 @@
 {
   "name": "pii-shield",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Chrome extension for PII redaction in ChatGPT conversations",
   "type": "module",
   "scripts": {

@@ -18,7 +18,12 @@ export const DeAnonymizedSpan: React.FC<DeAnonymizedSpanProps> = ({
   return (
     <>
       <style>{styles}</style>
-      <span className="deanonymized-span">
+      <span
+        className="deanonymized-span"
+        role="tooltip"
+        tabIndex={0}
+        aria-label={`Real value: ${realValue}, sent to ChatGPT as: ${pseudonym}`}
+      >
         {realValue}
         <span className="tooltip">
           <span className="tooltip-content">

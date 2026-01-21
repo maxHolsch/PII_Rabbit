@@ -183,7 +183,7 @@ export const InputOverlay: React.FC = () => {
               <span className="shield-icon">🛡️</span>
               <span>PII Shield</span>
             </div>
-            <div className="status-indicator">
+            <div className="status-indicator" role="status" aria-live="polite">
               <div className={`status-dot ${state}`}></div>
               <span>{getStateDisplay()}</span>
             </div>
@@ -199,6 +199,7 @@ export const InputOverlay: React.FC = () => {
                 onChange={handleChange}
                 onKeyDown={handleKeyDown}
                 disabled={isInputDisabled}
+                aria-label="Message input with automatic PII detection"
               />
             </div>
 
@@ -208,7 +209,7 @@ export const InputOverlay: React.FC = () => {
                   {text.length} character{text.length !== 1 ? 's' : ''}
                 </div>
                 <div className="keyboard-hint">
-                  Press Ctrl+Enter to submit
+                  <kbd aria-label="Keyboard shortcut">Press Ctrl+Enter to submit</kbd>
                 </div>
               </div>
 
@@ -226,6 +227,7 @@ export const InputOverlay: React.FC = () => {
                   className="btn btn-primary"
                   onClick={handleSubmit}
                   disabled={isSubmitDisabled}
+                  aria-label="Secure and send message to ChatGPT"
                 >
                   {state === 'processing' ? (
                     <>
@@ -243,7 +245,11 @@ export const InputOverlay: React.FC = () => {
             </div>
 
             {statusMessage && (
-              <div className={`status-message ${state === 'error' ? 'error' : 'info'}`}>
+              <div
+                className={`status-message ${state === 'error' ? 'error' : 'info'}`}
+                role={state === 'error' ? 'alert' : 'status'}
+                aria-live={state === 'error' ? 'assertive' : 'polite'}
+              >
                 {statusMessage}
               </div>
             )}

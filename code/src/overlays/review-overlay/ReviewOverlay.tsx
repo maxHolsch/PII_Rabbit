@@ -32,7 +32,18 @@ export const ReviewOverlay: React.FC<ReviewOverlayProps> = ({
       redactionCount: mappings.length,
       conversationId,
     });
-  }, []);
+
+    // Keyboard navigation handler
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [conversationId, mappings.length, onCancel]);
 
   const handleEditMapping = (pseudonym: string, newValue: string) => {
     logger.info('review:edit', 'Mapping edited', {
@@ -139,25 +150,39 @@ export const ReviewOverlay: React.FC<ReviewOverlayProps> = ({
     <>
       <style>{styles}</style>
       <div className="review-overlay-backdrop">
-        <div className="review-overlay">
+        <div
+          className="review-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="review-title"
+          aria-describedby="review-instruction"
+        >
           <div className="review-header">
-            <div className="review-title">
+            <div className="review-title" id="review-title">
               <span className="review-icon">🔍</span>
               <span>Review Redactions</span>
             </div>
-            <button className="close-button" onClick={handleCancel}>
+            <button
+              className="close-button"
+              onClick={handleCancel}
+              aria-label="Close review modal"
+            >
               ✕
             </button>
           </div>
 
           <div className="review-body">
-            <div className="review-instruction">
+            <div className="review-instruction" id="review-instruction">
               <strong>Review your message:</strong> Click on any highlighted
               redaction to edit or remove it. All personal information will be
               replaced before sending to ChatGPT.
             </div>
 
-            <div className="redacted-text-container">
+            <div
+              className="redacted-text-container"
+              role="region"
+              aria-label="Redacted message preview"
+            >
               {renderRedactedText()}
             </div>
 
@@ -191,7 +216,11 @@ export const ReviewOverlay: React.FC<ReviewOverlayProps> = ({
               <button className="btn btn-secondary" onClick={handleCancel}>
                 Cancel
               </button>
-              <button className="btn btn-primary" onClick={handleApprove}>
+              <button
+                className="btn btn-primary"
+                onClick={handleApprove}
+                aria-label={`Approve and send message (${mappings.length} item${mappings.length !== 1 ? 's' : ''} redacted)`}
+              >
                 <span>✓</span>
                 <span>Approve & Send</span>
               </button>

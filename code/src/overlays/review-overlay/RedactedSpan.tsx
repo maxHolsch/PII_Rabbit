@@ -75,18 +75,48 @@ export const RedactedSpan: React.FC<RedactedSpanProps> = ({
     }
   };
 
+  const handleSpanKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setShowPopover(!showPopover);
+    } else if (e.key === 'Escape') {
+      setShowPopover(false);
+    }
+  };
+
+  const getEntityIcon = (type: string): string => {
+    switch (type.toLowerCase()) {
+      case 'person':
+        return '👤';
+      case 'location':
+        return '📍';
+      case 'phone':
+        return '📞';
+      case 'email':
+        return '📧';
+      default:
+        return '🔒';
+    }
+  };
+
   return (
     <span
       ref={spanRef}
       className={`redacted-span ${mapping.entityType}`}
       onClick={handleClick}
+      onKeyDown={handleSpanKeyDown}
       style={{ position: 'relative' }}
+      role="button"
+      tabIndex={0}
+      aria-label={`${mapping.entityType}: ${mapping.pseudonym}, click to edit or remove`}
+      aria-expanded={showPopover}
     >
-      {mapping.pseudonym}
+      <span className="badge-icon">{getEntityIcon(mapping.entityType)}</span>
+      <span className="badge-text">{mapping.pseudonym}</span>
       <span className="tooltip">Original: {mapping.realValue}</span>
 
       {showPopover && (
-        <div ref={popoverRef} className="edit-popover">
+        <div ref={popoverRef} className="edit-popover" role="menu">
           <div className="edit-popover-title">Edit Redaction</div>
 
           {isEditing ? (
@@ -97,6 +127,7 @@ export const RedactedSpan: React.FC<RedactedSpanProps> = ({
                 onChange={(e) => setEditValue(e.target.value)}
                 onKeyDown={handleKeyDown}
                 autoFocus
+                aria-label={`Edit value for ${mapping.entityType}`}
                 style={{
                   width: '100%',
                   padding: '8px',
@@ -108,6 +139,7 @@ export const RedactedSpan: React.FC<RedactedSpanProps> = ({
               <div style={{ marginTop: '6px', display: 'flex', gap: '6px' }}>
                 <button
                   onClick={handleSaveEdit}
+                  aria-label="Save changes"
                   style={{
                     flex: 1,
                     padding: '6px',
@@ -126,6 +158,7 @@ export const RedactedSpan: React.FC<RedactedSpanProps> = ({
                     setEditValue(mapping.realValue);
                     setIsEditing(false);
                   }}
+                  aria-label="Cancel editing"
                   style={{
                     flex: 1,
                     padding: '6px',
@@ -143,10 +176,20 @@ export const RedactedSpan: React.FC<RedactedSpanProps> = ({
             </div>
           ) : (
             <div className="edit-popover-actions">
-              <button className="edit-action" onClick={handleEditClick}>
+              <button
+                className="edit-action"
+                onClick={handleEditClick}
+                role="menuitem"
+                aria-label="Change redaction value"
+              >
                 ✏️ Change value
               </button>
-              <button className="edit-action danger" onClick={handleRemoveClick}>
+              <button
+                className="edit-action danger"
+                onClick={handleRemoveClick}
+                role="menuitem"
+                aria-label="Remove this redaction"
+              >
                 🗑️ Don't redact this
               </button>
             </div>

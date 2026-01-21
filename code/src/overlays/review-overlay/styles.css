@@ -48,7 +48,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
   color: #111827;
 }
@@ -58,8 +58,8 @@
 }
 
 .close-button {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border: none;
   background: transparent;
   border-radius: 6px;
@@ -115,18 +115,32 @@
   background: #fef3c7;
   border: 1px solid #fbbf24;
   border-radius: 4px;
-  padding: 2px 6px;
+  padding: 4px 10px;
+  min-height: 32px;
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
   font-weight: 500;
   color: #92400e;
+  display: inline-flex;
+  align-items: center;
 }
 
 .redacted-span:hover {
   background: #fde68a;
   border-color: #f59e0b;
-  transform: translateY(-1px);
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.badge-icon {
+  margin-right: 4px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.badge-text {
+  line-height: 1;
 }
 
 .redacted-span.person {
@@ -138,6 +152,8 @@
 .redacted-span.person:hover {
   background: #bfdbfe;
   border-color: #3b82f6;
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
 }
 
 .redacted-span.location {
@@ -149,6 +165,8 @@
 .redacted-span.location:hover {
   background: #a7f3d0;
   border-color: #10b981;
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
 }
 
 .redacted-span.phone,
@@ -162,6 +180,8 @@
 .redacted-span.email:hover {
   background: #f5d0fe;
   border-color: #c026d3;
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 2px 4px rgba(192, 38, 211, 0.2);
 }
 
 .tooltip {
@@ -173,7 +193,7 @@
   color: white;
   padding: 6px 10px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 13px;
   white-space: nowrap;
   pointer-events: none;
   z-index: 10;
@@ -315,6 +335,7 @@
 
 .btn {
   padding: 10px 20px;
+  min-height: 44px;
   font-size: 14px;
   font-weight: 500;
   border: none;
@@ -373,5 +394,144 @@
 
 .empty-subtext {
   font-size: 14px;
-  color: #9ca3af;
+  color: #6b7280;
+}
+
+/* Focus indicators for accessibility */
+*:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+}
+
+/* ============================================
+   MOBILE RESPONSIVE DESIGN
+   ============================================ */
+
+/* Tablet */
+@media (max-width: 768px) {
+  .review-overlay {
+    max-width: calc(100vw - 32px);
+    max-height: 85vh;
+  }
+
+  .review-header,
+  .review-footer {
+    padding: 16px 20px;
+  }
+
+  .review-body {
+    padding: 20px;
+  }
+
+  .review-title {
+    font-size: 18px;
+  }
+
+  .close-button {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .review-overlay-backdrop {
+    padding: 12px;
+  }
+
+  .review-overlay {
+    max-width: 100%;
+    max-height: 90vh;
+    border-radius: 12px;
+  }
+
+  .review-header,
+  .review-footer {
+    padding: 12px 16px;
+  }
+
+  .review-title {
+    font-size: 16px;
+    gap: 8px;
+  }
+
+  .review-icon {
+    font-size: 18px;
+  }
+
+  .review-body {
+    padding: 16px;
+  }
+
+  .review-instruction {
+    font-size: 13px;
+    padding: 10px 14px;
+  }
+
+  .redacted-text-container {
+    padding: 16px;
+    font-size: 14px;
+  }
+
+  .redacted-span {
+    padding: 3px 8px;
+    font-size: 13px;
+  }
+
+  .edit-popover {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    border-radius: 16px 16px 0 0;
+    min-width: 100%;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+  }
+
+  .mapping-list {
+    margin-top: 20px;
+    padding-top: 20px;
+  }
+
+  .mapping-list-title {
+    font-size: 13px;
+  }
+
+  .mapping-item {
+    padding: 8px 10px;
+    font-size: 12px;
+    flex-wrap: wrap;
+  }
+
+  .footer-hint {
+    font-size: 11px;
+  }
+
+  .footer-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 16px;
+  }
+}
+
+/* Very small devices */
+@media (max-width: 360px) {
+  .review-overlay {
+    max-height: 95vh;
+  }
+
+  .review-title span:not(.review-icon) {
+    font-size: 14px;
+  }
+
+  .redacted-text-container {
+    font-size: 13px;
+  }
 }

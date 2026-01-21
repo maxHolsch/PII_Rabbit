@@ -1,0 +1,261 @@
+/**
+ * Animation Library
+ * Reusable animations with accessibility support (respects prefers-reduced-motion)
+ */
+
+/* ============================================
+   FADE ANIMATIONS
+   ============================================ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 300ms ease-out;
+}
+
+.animate-fadeOut {
+  animation: fadeOut 300ms ease-in;
+}
+
+/* ============================================
+   SLIDE ANIMATIONS
+   ============================================ */
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideOutUp {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes slideOutDown {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+.animate-slideInUp {
+  animation: slideInUp 300ms ease-out;
+}
+
+.animate-slideInDown {
+  animation: slideInDown 200ms ease-out;
+}
+
+.animate-slideOutUp {
+  animation: slideOutUp 200ms ease-in;
+}
+
+.animate-slideOutDown {
+  animation: slideOutDown 200ms ease-in;
+}
+
+/* ============================================
+   SCALE ANIMATIONS
+   ============================================ */
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes scaleOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.animate-scaleIn {
+  animation: scaleIn 200ms ease-out;
+}
+
+.animate-scaleOut {
+  animation: scaleOut 200ms ease-in;
+}
+
+/* ============================================
+   SHAKE ANIMATION (for errors)
+   ============================================ */
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-8px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(8px);
+  }
+}
+
+.animate-shake {
+  animation: shake 400ms ease-in-out;
+}
+
+/* ============================================
+   PULSE ANIMATIONS
+   ============================================ */
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes pulseShadow {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+  }
+  50% {
+    box-shadow: 0 2px 12px rgba(79, 70, 229, 0.5);
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.animate-pulseShadow {
+  animation: pulseShadow 3s ease-in-out infinite;
+}
+
+/* ============================================
+   BOUNCE ANIMATION
+   ============================================ */
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-bounce {
+  animation: bounce 1s ease-in-out infinite;
+}
+
+/* ============================================
+   SPIN ANIMATION (for loaders)
+   ============================================ */
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 0.8s linear infinite;
+}
+
+/* ============================================
+   ACCESSIBILITY: RESPECT REDUCED MOTION
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  /* Disable all animation classes */
+  .animate-fadeIn,
+  .animate-fadeOut,
+  .animate-slideInUp,
+  .animate-slideInDown,
+  .animate-slideOutUp,
+  .animate-slideOutDown,
+  .animate-scaleIn,
+  .animate-scaleOut,
+  .animate-shake,
+  .animate-pulse,
+  .animate-pulseShadow,
+  .animate-bounce,
+  .animate-spin {
+    animation: none !important;
+  }
+
+  /* Show final state immediately */
+  .animate-fadeIn,
+  .animate-slideInUp,
+  .animate-slideInDown,
+  .animate-scaleIn {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .animate-fadeOut,
+  .animate-slideOutUp,
+  .animate-slideOutDown,
+  .animate-scaleOut {
+    opacity: 0 !important;
+    transform: none !important;
+  }
+}

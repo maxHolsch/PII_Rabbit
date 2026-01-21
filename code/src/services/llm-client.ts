@@ -149,6 +149,6 @@ export async function createLLMClient(): Promise<LLMClient> {
 
   return new LLMClient(
     settings.llmEndpoint || 'http://localhost:1234',
-    settings.llmModel || 'qwen/qwen3-4b-thinking-2507'
+    settings.llmModel || 'qwen3-0.6b'
   );
 }
