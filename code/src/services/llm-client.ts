@@ -147,8 +147,12 @@ export async function createLLMClient(): Promise<LLMClient> {
     type: 'settings:get',
   });
 
+  const model = settings.llmModel || 'qwen/qwen3-4b-thinking-2507';
+  const version = chrome.runtime.getManifest().version;
+  console.log(`[PII Shield v${version}] Using LLM model:`, model);
+
   return new LLMClient(
     settings.llmEndpoint || 'http://localhost:1234',
-    settings.llmModel || 'qwen3-0.6b'
+    model
   );
 }

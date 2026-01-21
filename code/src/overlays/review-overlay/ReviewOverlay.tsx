@@ -46,34 +46,81 @@ export const ReviewOverlay: React.FC<ReviewOverlayProps> = ({
   }, [conversationId, mappings.length, onCancel]);
 
   const handleEditMapping = (pseudonym: string, newValue: string) => {
+    console.log('[ReviewOverlay] handleEditMapping called:', {
+      pseudonym,
+      newValue,
+      currentMappings: mappings,
+    });
+
     logger.info('review:edit', 'Mapping edited', {
       pseudonym,
       newValue,
     });
 
-    setMappings((prev) =>
-      prev.map((m) =>
+    setMappings((prev) => {
+      const updated = prev.map((m) =>
         m.pseudonym === pseudonym ? { ...m, realValue: newValue } : m
-      )
-    );
+      );
+      console.log('[ReviewOverlay] Mappings updated after edit:', {
+        previousCount: prev.length,
+        updatedCount: updated.length,
+        updated,
+      });
+      return updated;
+    });
   };
 
   const handleRemoveMapping = (pseudonym: string) => {
+    console.log('[ReviewOverlay] handleRemoveMapping called:', {
+      pseudonym,
+      currentMappings: mappings,
+    });
+
     logger.info('review:remove', 'Mapping removed', { pseudonym });
 
     // Find the mapping to get the original value
     const mapping = mappings.find((m) => m.pseudonym === pseudonym);
-    if (!mapping) return;
+    if (!mapping) {
+      console.warn('[ReviewOverlay] Mapping not found for pseudonym:', pseudonym);
+      return;
+    }
+
+    console.log('[ReviewOverlay] Removing mapping:', {
+      mapping,
+      willReplacePseudonymWith: mapping.realValue,
+    });
 
     // Replace pseudonym in text with original value
     const regex = new RegExp(`\\[${escapeRegex(pseudonym)}\\]`, 'g');
-    setRedactedText((prev) => prev.replace(regex, mapping.realValue));
+    setRedactedText((prev) => {
+      const updated = prev.replace(regex, mapping.realValue);
+      console.log('[ReviewOverlay] Redacted text updated:', {
+        previousLength: prev.length,
+        updatedLength: updated.length,
+      });
+      return updated;
+    });
 
     // Remove from mappings
-    setMappings((prev) => prev.filter((m) => m.pseudonym !== pseudonym));
+    setMappings((prev) => {
+      const updated = prev.filter((m) => m.pseudonym !== pseudonym);
+      console.log('[ReviewOverlay] Mappings updated after removal:', {
+        previousCount: prev.length,
+        updatedCount: updated.length,
+        updated,
+      });
+      return updated;
+    });
   };
 
   const handleApprove = () => {
+    console.log('[ReviewOverlay] handleApprove called:', {
+      redactedText,
+      mappings,
+      originalMappingCount: result.mappings.length,
+      currentMappingCount: mappings.length,
+    });
+
     logger.info('review:approved', 'Redactions approved', {
       edits: mappings.length !== result.mappings.length,
       finalMappings: mappings.length,

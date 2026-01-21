@@ -23,38 +23,94 @@ export const RedactedSpan: React.FC<RedactedSpanProps> = ({
   const spanRef = useRef<HTMLSpanElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
+  // Sync editValue with mapping.realValue when it changes
+  useEffect(() => {
+    setEditValue(mapping.realValue);
+  }, [mapping.realValue]);
+
+  // Track popover visibility changes
+  useEffect(() => {
+    console.log('[RedactedSpan] Popover visibility changed:', {
+      showPopover,
+      isEditing,
+      pseudonym: mapping.pseudonym,
+    });
+  }, [showPopover, isEditing, mapping.pseudonym]);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(e.target as Node) &&
-        !spanRef.current?.contains(e.target as Node)
-      ) {
+      // Use composedPath() to handle Shadow DOM event retargeting
+      const path = e.composedPath();
+      const clickedInsidePopover = popoverRef.current && path.includes(popoverRef.current);
+      const clickedInsideSpan = spanRef.current && path.includes(spanRef.current);
+
+      console.log('[RedactedSpan] handleClickOutside triggered:', {
+        target: e.target,
+        composedPath: path.slice(0, 5).map((el: EventTarget) => {
+          if (el instanceof Element) {
+            return `${el.tagName}${el.className ? '.' + el.className.split(' ').join('.') : ''}${el.id ? '#' + el.id : ''}`;
+          }
+          return el;
+        }),
+        clickedInsidePopover,
+        clickedInsideSpan,
+      });
+
+      if (!clickedInsidePopover && !clickedInsideSpan) {
+        console.log('[RedactedSpan] Closing popover due to outside click');
         setShowPopover(false);
         setIsEditing(false);
+      } else {
+        console.log('[RedactedSpan] Click was inside popover or span, keeping open');
       }
     };
 
     if (showPopover) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+      // Delay attaching the listener to avoid catching the same click that opened the popover
+      console.log('[RedactedSpan] Scheduling click-outside listener');
+      const timeoutId = setTimeout(() => {
+        console.log('[RedactedSpan] Attaching click-outside listener');
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 0);
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+      return () => {
+        console.log('[RedactedSpan] Cleaning up click-outside listener');
+        clearTimeout(timeoutId);
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
   }, [showPopover]);
 
   const handleClick = (e: React.MouseEvent) => {
+    console.log('[RedactedSpan] Span clicked:', {
+      pseudonym: mapping.pseudonym,
+      currentShowPopover: showPopover,
+      willToggleTo: !showPopover,
+    });
     e.stopPropagation();
     setShowPopover(!showPopover);
   };
 
   const handleEditClick = () => {
+    console.log('[RedactedSpan] Edit button clicked:', {
+      pseudonym: mapping.pseudonym,
+      currentValue: mapping.realValue,
+    });
     setIsEditing(true);
   };
 
   const handleSaveEdit = () => {
+    console.log('[RedactedSpan] Save edit clicked:', {
+      pseudonym: mapping.pseudonym,
+      oldValue: mapping.realValue,
+      newValue: editValue.trim(),
+      willCallOnEdit: editValue.trim() && editValue !== mapping.realValue,
+    });
     if (editValue.trim() && editValue !== mapping.realValue) {
+      console.log('[RedactedSpan] Calling onEdit handler with:', {
+        pseudonym: mapping.pseudonym,
+        newValue: editValue.trim(),
+      });
       onEdit(mapping.pseudonym, editValue.trim());
     }
     setIsEditing(false);
@@ -62,6 +118,13 @@ export const RedactedSpan: React.FC<RedactedSpanProps> = ({
   };
 
   const handleRemoveClick = () => {
+    console.log('[RedactedSpan] Remove button clicked:', {
+      pseudonym: mapping.pseudonym,
+      realValue: mapping.realValue,
+    });
+    console.log('[RedactedSpan] Calling onRemove handler with:', {
+      pseudonym: mapping.pseudonym,
+    });
     onRemove(mapping.pseudonym);
     setShowPopover(false);
   };
@@ -178,7 +241,16 @@ export const RedactedSpan: React.FC<RedactedSpanProps> = ({
             <div className="edit-popover-actions">
               <button
                 className="edit-action"
-                onClick={handleEditClick}
+                onClick={(e) => {
+                  console.log('[RedactedSpan] Edit button onClick fired', {
+                    pseudonym: mapping.pseudonym,
+                    target: e.target,
+                    currentTarget: e.currentTarget,
+                  });
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleEditClick();
+                }}
                 role="menuitem"
                 aria-label="Change redaction value"
               >
@@ -186,7 +258,16 @@ export const RedactedSpan: React.FC<RedactedSpanProps> = ({
               </button>
               <button
                 className="edit-action danger"
-                onClick={handleRemoveClick}
+                onClick={(e) => {
+                  console.log('[RedactedSpan] Remove button onClick fired', {
+                    pseudonym: mapping.pseudonym,
+                    target: e.target,
+                    currentTarget: e.currentTarget,
+                  });
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleRemoveClick();
+                }}
                 role="menuitem"
                 aria-label="Remove this redaction"
               >

@@ -124,6 +124,7 @@
   color: #92400e;
   display: inline-flex;
   align-items: center;
+  isolation: isolate;
 }
 
 .redacted-span:hover {
@@ -226,6 +227,7 @@
   padding: 12px;
   min-width: 200px;
   z-index: 20;
+  pointer-events: auto;
 }
 
 .edit-popover-title {
@@ -253,6 +255,9 @@
   color: #374151;
   text-align: left;
   transition: all 0.2s;
+  pointer-events: auto;
+  position: relative;
+  z-index: 1;
 }
 
 .edit-action:hover {
@@ -487,6 +492,8 @@
     border-radius: 16px 16px 0 0;
     min-width: 100%;
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+    pointer-events: auto;
+    z-index: 9999999;
   }
 
   .mapping-list {

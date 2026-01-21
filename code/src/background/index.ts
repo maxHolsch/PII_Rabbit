@@ -22,6 +22,11 @@ chrome.runtime.onInstalled.addListener((details) => {
       autoRedact: true,
       debugMode: false,
     });
+  } else if (details.reason === 'update') {
+    // Update model on extension update
+    chrome.storage.local.set({
+      llmModel: 'qwen/qwen3-4b-thinking-2507',
+    });
   }
 });
 

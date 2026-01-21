@@ -120,6 +120,48 @@
     .status.inactive {
       color: #ef4444;
     }
+
+    .debug-section {
+      border-top: 1px solid #e5e5e5;
+      padding-top: 12px;
+      margin-top: 12px;
+    }
+
+    .debug-title {
+      font-size: 11px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      border: 1px solid #e5e5e5;
+      border-radius: 6px;
+      background: white;
+      color: #666;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: #f9f9f9;
+      border-color: #d1d1d1;
+    }
+
+    .btn.danger {
+      color: #ef4444;
+      border-color: #fecaca;
+    }
+
+    .btn.danger:hover {
+      background: #fef2f2;
+      border-color: #fca5a5;
+    }
   </style>
 </head>
 <body>
@@ -137,6 +179,11 @@
       </label>
     </div>
     <div class="status" id="status">Loading...</div>
+
+    <div class="debug-section">
+      <div class="debug-title">Debug</div>
+      <button id="clear-storage" class="btn danger">Clear Storage</button>
+    </div>
   </div>
 
   <script src="./popup.ts" type="module"></script>

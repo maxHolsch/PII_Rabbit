@@ -1,11 +1,15 @@
 {
   "name": "pii-shield",
-  "version": "0.1.1",
+  "version": "0.1.16",
   "description": "Chrome extension for PII redaction in ChatGPT conversations",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "clean": "rm -rf dist",
+    "clear-cache": "bash scripts/clear-chrome-cache.sh",
+    "build": "npm run clean && node scripts/bump-version.js && tsc && vite build && node scripts/dev-reload-helper.js",
+    "build:prod": "npm run clean && tsc && vite build",
+    "dev:reload": "npm run build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "type-check": "tsc --noEmit"

@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ReviewOverlay } from './ReviewOverlay';
+import { ErrorBoundary } from './ErrorBoundary';
 import { logger } from '@/utils/logger';
 import { eventBus } from '@/utils/event-bus';
 import type { RedactionResult, RedactionMapping } from '@/types';
@@ -31,7 +32,16 @@ const ReviewOverlayManager: React.FC = () => {
   }, []);
 
   const handleApprove = (finalText: string, mappings: RedactionMapping[]) => {
-    if (!reviewData) return;
+    console.log('[ReviewOverlayManager] handleApprove called:', {
+      finalText,
+      mappings,
+      reviewData,
+    });
+
+    if (!reviewData) {
+      console.warn('[ReviewOverlayManager] No review data available');
+      return;
+    }
 
     logger.info('review-manager:approve', 'Redactions approved', {
       finalMappings: mappings.length,
@@ -43,6 +53,8 @@ const ReviewOverlayManager: React.FC = () => {
       mappings,
       conversationId: reviewData.conversationId,
     });
+
+    console.log('[ReviewOverlayManager] Approval event emitted, closing overlay');
 
     // Close overlay
     setReviewData(null);
@@ -79,14 +91,36 @@ export function mountReviewOverlay(shadowRoot: ShadowRoot): void {
     const container = document.createElement('div');
     shadowRoot.appendChild(container);
 
+    // Add Shadow DOM event verification
+    shadowRoot.addEventListener('click', (e) => {
+      console.log('[ShadowDOM] Click event detected:', {
+        target: e.target,
+        currentTarget: e.currentTarget,
+        composed: e.composed,
+        bubbles: e.bubbles,
+        path: e.composedPath?.().map((el: EventTarget) => {
+          if (el instanceof Element) {
+            return `${el.tagName}${el.className ? '.' + el.className : ''}`;
+          }
+          return el;
+        }),
+      });
+    }, true); // Use capture phase to catch all events
+
     // Create React root and render
     const root = createRoot(container);
-    root.render(<ReviewOverlayManager />);
+    root.render(
+      <ErrorBoundary>
+        <ReviewOverlayManager />
+      </ErrorBoundary>
+    );
 
     logger.info('review-overlay:mount', 'Review overlay mounted successfully');
+    console.log('[ShadowDOM] Review overlay mounted with event verification');
   } catch (error) {
     logger.error('review-overlay:mount', 'Failed to mount review overlay', {
       error: String(error),
     });
+    console.error('[ShadowDOM] Failed to mount review overlay:', error);
   }
 }
