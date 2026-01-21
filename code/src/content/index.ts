@@ -18,6 +18,7 @@ import { mappingService } from '@/services/mapping-service';
 class PIIShieldContent {
   private initialized = false;
   private conversationId: string | null = null;
+  private pendingMessages = new Map<HTMLElement, number>();
 
   async init(): Promise<void> {
     if (this.initialized) {
@@ -274,16 +275,26 @@ class PIIShieldContent {
             conversationId: event.conversationId,
           });
         } else {
-          throw new Error('Injection returned false');
+          throw new Error('Injection failed - returned false');
         }
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+
         logger.error('content:inject-error', 'Injection failed', {
-          error: String(error),
+          error: errorMessage,
+          stack: error instanceof Error ? error.stack : undefined,
+          conversationId: event.conversationId,
         });
 
-        // Emit error event
+        // Emit detailed error event
         eventBus.emit('injection:error', {
-          error: String(error),
+          error: errorMessage,
+          conversationId: event.conversationId,
+          timestamp: Date.now(),
+          context: {
+            textLength: event.text.length,
+            url: window.location.href,
+          },
         });
       }
     });
@@ -291,9 +302,29 @@ class PIIShieldContent {
     // Listen for DOM mutations (new messages)
     const observer = new MutationObserver(async (mutations) => {
       for (const mutation of mutations) {
+        // Handle new nodes being added
         for (const node of mutation.addedNodes) {
           if (node instanceof HTMLElement) {
             await this.processNewNode(node);
+          }
+        }
+
+        // Handle text content changes (streaming messages)
+        if (mutation.type === 'characterData' || mutation.type === 'childList') {
+          const target = mutation.target;
+
+          // Find the message container
+          let messageElement: HTMLElement | null = null;
+          if (target instanceof HTMLElement) {
+            messageElement = target.closest('[data-message-author-role]') ||
+                           target.closest('.group');
+          } else if (target.parentElement) {
+            messageElement = target.parentElement.closest('[data-message-author-role]') ||
+                           target.parentElement.closest('.group');
+          }
+
+          if (messageElement && !messageProcessor.hasBeenProcessed(messageElement)) {
+            await this.processNewNode(messageElement);
           }
         }
       }
@@ -304,8 +335,83 @@ class PIIShieldContent {
       observer.observe(mainArea, {
         childList: true,
         subtree: true,
+        characterData: true,
+        characterDataOldValue: false,
       });
     }
+  }
+
+  private processingMessages = new Set<HTMLElement>();
+
+  /**
+   * Schedule message processing after a delay
+   * Used for streaming messages that don't have content yet
+   */
+  private scheduleMessageProcessing(node: HTMLElement): void {
+    // Cancel existing timeout if any
+    this.cancelPendingProcessing(node);
+
+    // Schedule retry after 500ms
+    const timeout = setTimeout(() => {
+      this.pendingMessages.delete(node);
+      this.processNewNode(node);
+    }, 500);
+
+    this.pendingMessages.set(node, timeout);
+
+    logger.debug('content:schedule-retry', 'Scheduled message processing retry');
+  }
+
+  /**
+   * Cancel pending message processing
+   */
+  private cancelPendingProcessing(node: HTMLElement): void {
+    const timeout = this.pendingMessages.get(node);
+    if (timeout) {
+      clearTimeout(timeout);
+      this.pendingMessages.delete(node);
+      logger.debug('content:cancel-retry', 'Cancelled pending message processing');
+    }
+  }
+
+  /**
+   * Wait for streaming message to complete
+   * Detects when message content stops changing
+   */
+  private async waitForStreamingComplete(
+    node: HTMLElement,
+    maxWait = 10000
+  ): Promise<void> {
+    const startTime = Date.now();
+    let lastLength = 0;
+    let stableCount = 0;
+
+    logger.debug('content:wait-streaming', 'Waiting for streaming to complete');
+
+    while (Date.now() - startTime < maxWait) {
+      const currentLength = node.textContent?.length || 0;
+
+      if (currentLength === lastLength) {
+        stableCount++;
+        // If length hasn't changed for 3 checks (300ms), consider it complete
+        if (stableCount >= 3) {
+          logger.debug('content:streaming-complete', 'Streaming appears complete', {
+            finalLength: currentLength,
+            elapsed: Date.now() - startTime,
+          });
+          return;
+        }
+      } else {
+        stableCount = 0;
+        lastLength = currentLength;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    logger.warn('content:streaming-timeout', 'Streaming did not stabilize within timeout', {
+      maxWait,
+    });
   }
 
   /**
@@ -321,10 +427,21 @@ class PIIShieldContent {
       return;
     }
 
-    // Check if already processed
-    if (messageProcessor.hasBeenProcessed(node)) {
+    // Check if already processed or being processed
+    if (messageProcessor.hasBeenProcessed(node) || this.processingMessages.has(node)) {
       return;
     }
+
+    // Check if message has any text content yet
+    const textContent = node.textContent?.trim();
+    if (!textContent) {
+      // Message container exists but no text yet, schedule a retry
+      this.scheduleMessageProcessing(node);
+      return;
+    }
+
+    // Cancel any pending retry for this node since we have content now
+    this.cancelPendingProcessing(node);
 
     logger.debug('content:new-message', 'New message detected');
 
@@ -333,29 +450,62 @@ class PIIShieldContent {
       return;
     }
 
+    // Mark as being processed to prevent duplicate processing
+    this.processingMessages.add(node);
+
     try {
       const mappings = await mappingService.getMappings(this.conversationId);
 
       if (mappings.size === 0) {
         logger.debug('content:no-mappings', 'No mappings to apply');
+        messageProcessor.markAsProcessed(node);
         return;
       }
 
-      // Process message
+      // Wait for streaming to complete before processing
+      await this.waitForStreamingComplete(node, 10000);
+
+      // Process message with complete content
       const replacements = await messageProcessor.processMessage(node, mappings);
 
       if (replacements > 0) {
         logger.info('content:message-deanonymized', 'Message de-anonymized', {
           replacements,
+          conversationId: this.conversationId,
+        });
+
+        // Emit event for UI feedback
+        eventBus.emit('message:deanonymized', {
+          replacements,
+          conversationId: this.conversationId,
+          timestamp: Date.now(),
         });
       }
 
       // Mark as processed
       messageProcessor.markAsProcessed(node);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
       logger.error('content:process-message', 'Failed to process message', {
-        error: String(error),
+        error: errorMessage,
+        stack: error instanceof Error ? error.stack : undefined,
+        conversationId: this.conversationId,
+        hasTextContent: !!node.textContent,
+        textLength: node.textContent?.length || 0,
       });
+
+      // Emit error event for tracking
+      eventBus.emit('message:process-error', {
+        error: errorMessage,
+        conversationId: this.conversationId,
+        timestamp: Date.now(),
+      });
+
+      // Still mark as processed to avoid retry loops
+      messageProcessor.markAsProcessed(node);
+    } finally {
+      this.processingMessages.delete(node);
     }
   }
 }

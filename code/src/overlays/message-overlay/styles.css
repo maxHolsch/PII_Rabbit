@@ -2,6 +2,10 @@
  * Message overlay styles (scoped to Shadow DOM)
  */
 
+:host {
+  display: inline;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
