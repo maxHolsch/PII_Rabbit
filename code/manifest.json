@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "PII Shield",
-  "version": "0.1.17",
+  "version": "0.1.25",
   "description": "Protect your privacy in ChatGPT conversations with local PII redaction",
   "permissions": [
     "storage",

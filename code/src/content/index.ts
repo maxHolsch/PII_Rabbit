@@ -15,16 +15,31 @@ import { mountReviewOverlay } from '@/overlays/review-overlay';
 import { redactionService } from '@/services/redaction-service';
 import { mappingService } from '@/services/mapping-service';
 
+// Global initialization flag to prevent multiple instances
+let globalInitialized = false;
+
 class PIIShieldContent {
   private initialized = false;
   private conversationId: string | null = null;
   private pendingMessages = new Map<HTMLElement, number>();
+  private eventUnsubscribers: Array<() => void> = [];
 
   async init(): Promise<void> {
-    if (this.initialized) {
+    if (this.initialized || globalInitialized) {
       logger.warn('content:init', 'Already initialized');
       return;
     }
+
+    // Check if listeners already exist before initializing
+    const existingListeners = eventBus.listenerCount('chatgpt:inject');
+    if (existingListeners > 0) {
+      logger.error('content:init', 'Event listeners already registered, cleaning up first', {
+        count: existingListeners,
+      });
+      this.cleanup();
+    }
+
+    globalInitialized = true;
 
     logger.info('content:init', 'Initializing PII Shield', {
       url: window.location.href,
@@ -42,6 +57,23 @@ class PIIShieldContent {
       logger.error('content:init', 'ChatGPT UI not ready, aborting');
       return;
     }
+
+    // Wait for React hydration to complete
+    // This prevents interfering with ChatGPT's React hydration process
+    await new Promise<void>((resolve) => {
+      if ('requestIdleCallback' in window) {
+        // Use requestIdleCallback to wait for browser idle state
+        window.requestIdleCallback(() => {
+          // Add small additional delay to ensure React is fully hydrated
+          setTimeout(() => resolve(), 500);
+        }, { timeout: 3000 });
+      } else {
+        // Fallback for browsers without requestIdleCallback
+        setTimeout(() => resolve(), 2000);
+      }
+    });
+
+    logger.debug('content:init', 'React hydration wait complete');
 
     // Initialize storage
     try {
@@ -78,6 +110,29 @@ class PIIShieldContent {
 
     this.initialized = true;
     logger.info('content:init', 'PII Shield initialized successfully');
+  }
+
+  /**
+   * Cleanup all event listeners and state
+   */
+  private cleanup(): void {
+    logger.info('content:cleanup', 'Cleaning up event listeners', {
+      unsubscriberCount: this.eventUnsubscribers.length,
+      pendingMessagesCount: this.pendingMessages.size,
+    });
+
+    // Unsubscribe from all events
+    this.eventUnsubscribers.forEach(unsub => unsub());
+    this.eventUnsubscribers = [];
+
+    // Clear pending messages
+    this.pendingMessages.forEach(timeout => clearTimeout(timeout));
+    this.pendingMessages.clear();
+
+    // Reset initialization flag
+    this.initialized = false;
+
+    logger.info('content:cleanup', 'Cleanup complete');
   }
 
   private setupURLListener(): void {
@@ -149,155 +204,189 @@ class PIIShieldContent {
   }
 
   private setupEventListeners(): void {
-    // Listen for extension toggle
-    eventBus.on('extension:toggle', (event: { enabled: boolean }) => {
-      logger.info('content:toggle', 'Extension toggled', event);
+    // Store unsubscribe functions for cleanup
 
-      if (event.enabled) {
-        this.injectOverlays();
-      } else {
-        shadowInjector.cleanup();
-      }
-    });
+    // Listen for extension toggle
+    this.eventUnsubscribers.push(
+      eventBus.on('extension:toggle', (event: { enabled: boolean }) => {
+        logger.info('content:toggle', 'Extension toggled', event);
+
+        if (event.enabled) {
+          this.injectOverlays();
+        } else {
+          shadowInjector.cleanup();
+        }
+      })
+    );
 
     // Listen for redaction requests from input overlay
-    eventBus.on('redaction:request', async (event: { text: string; conversationId: string }) => {
-      logger.info('content:redaction', 'Processing redaction request', {
-        textLength: event.text.length,
-        conversationId: event.conversationId,
-      });
-
-      try {
-        // Get existing mappings for this conversation
-        const existingMappings = await mappingService.getMappings(event.conversationId);
-
-        // Perform redaction
-        const result = await redactionService.redactText(event.text, existingMappings);
-
-        // Validate result
-        const isValid = redactionService.validateRedaction(result, event.text);
-
-        if (!isValid) {
-          throw new Error('Redaction validation failed');
-        }
-
-        // Emit success event with result
-        eventBus.emit('redaction:complete', {
-          result,
-          originalText: event.text,
+    this.eventUnsubscribers.push(
+      eventBus.on('redaction:request', async (event: { text: string; conversationId: string }) => {
+        logger.info('content:redaction', 'Processing redaction request', {
+          textLength: event.text.length,
           conversationId: event.conversationId,
-        });
-      } catch (error) {
-        logger.error('content:redaction', 'Redaction failed', {
-          error: String(error),
-        });
-
-        // Emit error event
-        eventBus.emit('redaction:error', {
-          error: String(error),
-        });
-      }
-    });
-
-    // Listen for conversation changes to migrate mappings
-    eventBus.on('conversation:change', async (event: any) => {
-      if (event.needsMigration) {
-        logger.info('content:migrate', 'Migrating mappings', {
-          from: event.from,
-          to: event.to,
         });
 
         try {
-          await mappingService.migrateMappings(event.from, event.to);
+          // Get existing mappings for this conversation
+          const existingMappings = await mappingService.getMappings(event.conversationId);
 
-          // Update conversation ID reference
-          this.conversationId = event.to;
-          (window as any).__piiShieldConversationId = event.to;
+          // Perform redaction
+          const result = await redactionService.redactText(event.text, existingMappings);
+
+          // Validate result
+          const isValid = redactionService.validateRedaction(result, event.text);
+
+          if (!isValid) {
+            throw new Error('Redaction validation failed');
+          }
+
+          // Emit success event with result
+          eventBus.emit('redaction:complete', {
+            result,
+            originalText: event.text,
+            conversationId: event.conversationId,
+          });
         } catch (error) {
-          logger.error('content:migrate', 'Migration failed', {
+          logger.error('content:redaction', 'Redaction failed', {
+            error: String(error),
+          });
+
+          // Emit error event
+          eventBus.emit('redaction:error', {
             error: String(error),
           });
         }
-      }
-    });
+      })
+    );
+
+    // Listen for conversation changes to migrate mappings
+    this.eventUnsubscribers.push(
+      eventBus.on('conversation:change', async (event: any) => {
+        if (event.needsMigration) {
+          logger.info('content:migrate', 'Migrating mappings', {
+            from: event.from,
+            to: event.to,
+          });
+
+          try {
+            await mappingService.migrateMappings(event.from, event.to);
+
+            // Update conversation ID reference
+            this.conversationId = event.to;
+            (window as any).__piiShieldConversationId = event.to;
+          } catch (error) {
+            logger.error('content:migrate', 'Migration failed', {
+              error: String(error),
+            });
+          }
+        }
+      })
+    );
 
     // Listen for review cancelled
-    eventBus.on('review:cancelled', () => {
-      logger.info('content:review-cancel', 'Review cancelled, resetting input state');
+    this.eventUnsubscribers.push(
+      eventBus.on('review:cancelled', () => {
+        logger.info('content:review-cancel', 'Review cancelled, resetting input state');
 
-      // Reset input overlay to idle state
-      eventBus.emit('input:reset');
-    });
+        // Reset input overlay to idle state
+        eventBus.emit('input:reset');
+      })
+    );
 
     // Listen for redaction approved
-    eventBus.on('redaction:approved', async (event: any) => {
-      logger.info('content:redaction-approved', 'Redactions approved', {
-        conversationId: event.conversationId,
-        mappingCount: event.mappings.length,
-      });
+    this.eventUnsubscribers.push(
+      eventBus.on('redaction:approved', async (event: any) => {
+        const listenerCount = eventBus.listenerCount('redaction:approved');
 
-      try {
-        // Save mappings to storage
-        await mappingService.saveMappings(event.conversationId, event.mappings);
-
-        // Emit event to inject text into ChatGPT
-        eventBus.emit('chatgpt:inject', {
-          text: event.finalText,
+        logger.info('content:redaction-approved', 'Redactions approved', {
           conversationId: event.conversationId,
-        });
-      } catch (error) {
-        logger.error('content:save-mappings', 'Failed to save mappings', {
-          error: String(error),
+          mappingCount: event.mappings.length,
+          listenerCount,
         });
 
-        // Emit error event
-        eventBus.emit('injection:error', {
-          error: String(error),
-        });
-      }
-    });
+        // Warn if multiple listeners detected
+        if (listenerCount > 1) {
+          logger.warn('content:duplicate-listener', 'Multiple redaction:approved listeners detected', {
+            count: listenerCount,
+          });
+        }
 
-    // Listen for ChatGPT injection requests
-    eventBus.on('chatgpt:inject', async (event: any) => {
-      logger.info('content:inject-start', 'Injecting text into ChatGPT', {
-        textLength: event.text.length,
-        conversationId: event.conversationId,
-      });
+        try {
+          // Save mappings to storage
+          await mappingService.saveMappings(event.conversationId, event.mappings);
 
-      try {
-        const success = await chatGPTInjector.injectAndSend(event.text);
-
-        if (success) {
-          logger.info('content:inject-success', 'Text injected successfully');
-
-          // Emit success event
-          eventBus.emit('injection:complete', {
+          // Emit event to inject text into ChatGPT
+          eventBus.emit('chatgpt:inject', {
+            text: event.finalText,
             conversationId: event.conversationId,
           });
-        } else {
-          throw new Error('Injection failed - returned false');
+        } catch (error) {
+          logger.error('content:save-mappings', 'Failed to save mappings', {
+            error: String(error),
+          });
+
+          // Emit error event
+          eventBus.emit('injection:error', {
+            error: String(error),
+          });
         }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+      })
+    );
 
-        logger.error('content:inject-error', 'Injection failed', {
-          error: errorMessage,
-          stack: error instanceof Error ? error.stack : undefined,
+    // Listen for ChatGPT injection requests
+    this.eventUnsubscribers.push(
+      eventBus.on('chatgpt:inject', async (event: any) => {
+        const listenerCount = eventBus.listenerCount('chatgpt:inject');
+
+        logger.info('content:inject-start', 'Injecting text into ChatGPT', {
+          textLength: event.text.length,
           conversationId: event.conversationId,
+          listenerCount,
         });
 
-        // Emit detailed error event
-        eventBus.emit('injection:error', {
-          error: errorMessage,
-          conversationId: event.conversationId,
-          timestamp: Date.now(),
-          context: {
-            textLength: event.text.length,
-            url: window.location.href,
-          },
-        });
-      }
-    });
+        // Warn if multiple listeners detected
+        if (listenerCount > 1) {
+          logger.warn('content:duplicate-listener', 'Multiple chatgpt:inject listeners detected', {
+            count: listenerCount,
+          });
+        }
+
+        try {
+          const success = await chatGPTInjector.injectAndSend(event.text);
+
+          if (success) {
+            logger.info('content:inject-success', 'Text injected successfully');
+
+            // Emit success event
+            eventBus.emit('injection:complete', {
+              conversationId: event.conversationId,
+            });
+          } else {
+            throw new Error('Injection failed - returned false');
+          }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+
+          logger.error('content:inject-error', 'Injection failed', {
+            error: errorMessage,
+            stack: error instanceof Error ? error.stack : undefined,
+            conversationId: event.conversationId,
+          });
+
+          // Emit detailed error event
+          eventBus.emit('injection:error', {
+            error: errorMessage,
+            conversationId: event.conversationId,
+            timestamp: Date.now(),
+            context: {
+              textLength: event.text.length,
+              url: window.location.href,
+            },
+          });
+        }
+      })
+    );
 
     // Listen for DOM mutations (new messages)
     const observer = new MutationObserver(async (mutations) => {
@@ -510,13 +599,14 @@ class PIIShieldContent {
   }
 }
 
+// Singleton instance
+const shield = new PIIShieldContent();
+
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    const shield = new PIIShieldContent();
     shield.init();
   });
 } else {
-  const shield = new PIIShieldContent();
   shield.init();
 }

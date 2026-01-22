@@ -103,10 +103,9 @@ export function setContentEditableValue(
  */
 export function clickReactElement(element: HTMLElement): boolean {
   try {
-    // Dispatch mouse events
-    element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-    element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    // Use native click instead of dispatching multiple events
+    // Dispatching mousedown, mouseup, AND click might cause ChatGPT to send twice
+    element.click();
 
     logger.debug('react-sync:click', 'Click triggered successfully');
 

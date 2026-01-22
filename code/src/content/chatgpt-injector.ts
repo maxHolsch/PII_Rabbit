@@ -104,41 +104,11 @@ export class ChatGPTInjector {
       // Click send button
       clickReactElement(sendButton);
 
-      // Wait to verify the send actually happened
-      const sent = await this.waitForSendConfirmation(input, sendButton, 3000);
+      // Wait to verify the send actually happened with a longer timeout
+      const sent = await this.waitForSendConfirmation(input, sendButton, 5000);
 
       if (!sent) {
-        // Only use fallback if we confirmed the first attempt failed
-        logger.debug('injector:fallback', 'Send not confirmed, trying form submit');
-
-        // Validate input again before using it
-        input = await this.validateAndRefresh(input, findChatGPTInput);
-        if (!input) {
-          throw new Error('Input element became invalid before fallback');
-        }
-
-        const form = input.closest('form');
-        if (form) {
-          form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-
-          // Validate button for fallback confirmation check
-          sendButton = await this.validateAndRefresh(
-            sendButton,
-            () => this.findSendButton()
-          );
-
-          if (!sendButton) {
-            throw new Error('Send button became invalid during fallback');
-          }
-
-          // Wait again
-          const sentFallback = await this.waitForSendConfirmation(input, sendButton, 3000);
-          if (!sentFallback) {
-            throw new Error('Failed to send message after fallback attempt');
-          }
-        } else {
-          throw new Error('Failed to send message and no form found');
-        }
+        throw new Error('Failed to send message - send not confirmed');
       }
 
       logger.info('injector:complete', 'Injection completed successfully');
